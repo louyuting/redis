@@ -37,11 +37,14 @@ zskiplist *zslCreate(void) {
     zsl = zmalloc(sizeof(*zsl));
     zsl->level = 1;
     zsl->length = 0;
+    //header是32层
     zsl->header = zslCreateNode(ZSKIPLIST_MAXLEVEL,0,NULL);
+    // 初始化每一层
     for (j = 0; j < ZSKIPLIST_MAXLEVEL; j++) {
         zsl->header->level[j].forward = NULL;
         zsl->header->level[j].span = 0;
     }
+    //
     zsl->header->backward = NULL;
     zsl->tail = NULL;
     return zsl;
@@ -72,12 +75,16 @@ int zslRandomLevel(void) {
 }
 
 zskiplistNode *zslInsert(zskiplist *zsl, double score, robj *obj) {
+    // 存储搜索路径，一定是ZSKIPLIST_MAXLEVEL个节点，update[0]是最底层节点
     zskiplistNode *update[ZSKIPLIST_MAXLEVEL], *x;
+    // 存储经过的节点跨度
     unsigned int rank[ZSKIPLIST_MAXLEVEL];
     int i, level;
 
     redisAssert(!isnan(score));
     x = zsl->header;
+    // level-1是最上层，从最上层开始找
+    // 这一步主要是找到搜索路径，时间复杂度 log(N)
     for (i = zsl->level-1; i >= 0; i--) {
         /* store rank that is crossed to reach the insert position */
         rank[i] = i == (zsl->level-1) ? 0 : rank[i+1];
@@ -104,6 +111,7 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, robj *obj) {
         zsl->level = level;
     }
     x = zslCreateNode(level,score,obj);
+    // 重排向后指针，搜索路径上的每个节点后面都插入 x
     for (i = 0; i < level; i++) {
         x->level[i].forward = update[i]->level[i].forward;
         update[i]->level[i].forward = x;
@@ -118,6 +126,7 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, robj *obj) {
         update[i]->level[i].span++;
     }
 
+    // 重排向前指针，将x插入到 update[0] 后面
     x->backward = (update[0] == zsl->header) ? NULL : update[0];
     if (x->level[0].forward)
         x->level[0].forward->backward = x;

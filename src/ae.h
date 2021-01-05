@@ -89,7 +89,9 @@ typedef struct aeFiredEvent {
 typedef struct aeEventLoop {
     int maxfd;
     long long timeEventNextId;
+	// 注册的监听fd列表，最大支持10240个fd
     aeFileEvent events[AE_SETSIZE]; /* Registered events */
+	// 就绪的fd列表
     aeFiredEvent fired[AE_SETSIZE]; /* Fired events */
     aeTimeEvent *timeEventHead;
     int stop;

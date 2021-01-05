@@ -310,6 +310,7 @@ int anetUnixServer(char *err, char *path, mode_t perm)
     return s;
 }
 
+// 监听s这个fd,等待新的客户端连接
 static int anetGenericAccept(char *err, int s, struct sockaddr *sa, socklen_t *len) {
     int fd;
     while(1) {
@@ -327,6 +328,7 @@ static int anetGenericAccept(char *err, int s, struct sockaddr *sa, socklen_t *l
     return fd;
 }
 
+// s是TCP Server的对应的文件描述符：fd
 int anetTcpAccept(char *err, int s, char *ip, int *port) {
     int fd;
     struct sockaddr_in sa;

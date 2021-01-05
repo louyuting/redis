@@ -597,7 +597,9 @@ typedef struct _redisSortOperation {
 typedef struct zskiplistNode {
     robj *obj;
     double score;
+    // 回溯指针
     struct zskiplistNode *backward;
+    // 往后多层连接指针
     struct zskiplistLevel {
         struct zskiplistNode *forward;
         unsigned int span;
@@ -605,6 +607,7 @@ typedef struct zskiplistNode {
 } zskiplistNode;
 
 typedef struct zskiplist {
+    // 调表里面最底层的链表的头尾节点
     struct zskiplistNode *header, *tail;
     unsigned long length;
     int level;

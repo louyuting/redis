@@ -977,6 +977,13 @@ void initServer() {
     server.stat_fork_time = 0;
     server.unixtime = time(NULL);
     aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL);
+
+	//	把tcp server对应的fd也注册到 event loop的监听列表里面，如果该fd有新的数据，表示有新的连接过来了，则调用
+	//	acceptTcpHandler函数处理新的tcp连接。
+	//  从这里可以看出redis server真的是通过一个 epoll 来监听所有的客户端文件描述符以及tcp server监听的fd,一个线程处理所有的请求：
+	//    1）客户端socket连接
+	//	  2）客户端断开
+	//	  3）客户端查询/写请求
     if (server.ipfd > 0 && aeCreateFileEvent(server.el,server.ipfd,AE_READABLE,
         acceptTcpHandler,NULL) == AE_ERR) oom("creating file event");
     if (server.sofd > 0 && aeCreateFileEvent(server.el,server.sofd,AE_READABLE,

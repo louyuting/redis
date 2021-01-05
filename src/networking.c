@@ -908,6 +908,9 @@ void processInputBuffer(redisClient *c) {
     }
 }
 
+// 实际执行io数据事件的函数
+// fd: 客户端的socket连接的fd
+// privdata: socket的数据
 void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     redisClient *c = (redisClient*) privdata;
     char buf[REDIS_IOBUF_LEN];
@@ -915,7 +918,9 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     REDIS_NOTUSED(el);
     REDIS_NOTUSED(mask);
 
+	//因为事件执行是单线程的，所有这里直接拿到fd对应的客户端对象
     server.current_client = c;
+	// 读取fd里面的数据
     nread = read(fd, buf, REDIS_IOBUF_LEN);
     if (nread == -1) {
         if (errno == EAGAIN) {
@@ -930,6 +935,8 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
         freeClient(c);
         return;
     }
+
+	// 读取客户端命令的字节码
     if (nread) {
         c->querybuf = sdscatlen(c->querybuf,buf,nread);
         c->lastinteraction = time(NULL);
@@ -937,6 +944,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
         server.current_client = NULL;
         return;
     }
+	// 客户端的query命令太长，超过了限制;
     if (sdslen(c->querybuf) > server.client_max_querybuf_len) {
         sds ci = getClientInfoString(c), bytes = sdsempty();
 
@@ -947,7 +955,9 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
         freeClient(c);
         return;
     }
+    // 执行
     processInputBuffer(c);
+	// 清楚request级别信息
     server.current_client = NULL;
 }
 

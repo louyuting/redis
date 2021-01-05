@@ -32,6 +32,7 @@ set(RRDIS_SRC
         src/dict.h
         src/endian.c
         src/endian.h
+        src/epoll.h
         src/fmacros.h
         src/help.h
         src/intset.c
