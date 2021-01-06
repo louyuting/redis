@@ -76,6 +76,8 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
 
 	// 阻塞等待注册的事件发生，返回事件的数目，并将触发的事件写入events数组中。
 	// epoll_wait用于向用户进程返回ready list。
+	// 这里最后一个参数timeout单位是毫秒，epoll调用超时时间:
+	// 		大于0，阻塞；等于0马上返回，-1表示阻塞直到有事件就绪
     retval = epoll_wait(state->epfd,state->events,AE_SETSIZE,
             tvp ? (tvp->tv_sec*1000 + tvp->tv_usec/1000) : -1);
     if (retval > 0) {

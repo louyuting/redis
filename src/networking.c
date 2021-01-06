@@ -20,6 +20,7 @@ int listMatchObjects(void *a, void *b) {
     return equalStringObjects(a,b);
 }
 
+// note:event handler
 redisClient *createClient(int fd) {
     redisClient *c = zmalloc(sizeof(redisClient));
     c->bufpos = 0;
@@ -71,6 +72,7 @@ redisClient *createClient(int fd) {
 
 /* Set the event loop to listen for write events on the client's socket.
  * Typically gets called every time a reply is built. */
+// note:event handler
 int _installWriteEvent(redisClient *c) {
     if (c->fd <= 0) return REDIS_ERR;
     if (c->bufpos == 0 && listLength(c->reply) == 0 &&

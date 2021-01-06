@@ -204,6 +204,7 @@ int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id)
  *    Much better but still insertion or deletion of timers is O(N).
  * 2) Use a skiplist to have this operation as O(1) and insertion as O(log(N)).
  */
+// 查找时间事件列表里面最近时间的事件
 static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
 {
     aeTimeEvent *te = eventLoop->timeEventHead;
@@ -238,7 +239,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
         aeGetTime(&now_sec, &now_ms);
         if (now_sec > te->when_sec ||
             (now_sec == te->when_sec && now_ms >= te->when_ms))
-        {
+        {	// 当前时间已经达到了时间事件执行条件
             int retval;
 
             id = te->id;
@@ -273,7 +274,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
 /* Process every pending time event, then every pending file event
  * (that may be registered by time event callbacks just processed).
  * Without special flags the function sleeps until some file event
- * fires, or when the next time event occurrs (if any).
+ * fires, or when the next time event occurs (if any).
  *
  * If flags is 0, the function does nothing and returns.
  * if flags has AE_ALL_EVENTS set, all the kind of events are processed.
@@ -283,7 +284,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
  * the events that's possible to process without to wait are processed.
  *
  * The function returns the number of events processed. */
-// 外层有个死循环保证单线程循环执行这个函数
+// 外层有个死循环保证单线程循环执行这个函数，所以这个单线程对CPU的占用会很高
 int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 {
     int processed = 0, numevents;
@@ -297,12 +298,18 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
      * to fire. */
     if (eventLoop->maxfd != -1 ||
         ((flags & AE_TIME_EVENTS) && !(flags & AE_DONT_WAIT))) {
+		// redis主线程肯定会走这里逻辑
         int j;
         aeTimeEvent *shortest = NULL;
+        // tvp目的是保存最近的时间事件的触发距离当前时间的时间差。
         struct timeval tv, *tvp;
 
-        if (flags & AE_TIME_EVENTS && !(flags & AE_DONT_WAIT))
-            shortest = aeSearchNearestTimer(eventLoop);
+        if (flags & AE_TIME_EVENTS && !(flags & AE_DONT_WAIT)){
+			// 搜索最近时间的事件
+			shortest = aeSearchNearestTimer(eventLoop);
+        }
+
+		// 存在最近时间事件
         if (shortest) {
             long now_sec, now_ms;
 
@@ -310,11 +317,14 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
              * timer to fire. */
             aeGetTime(&now_sec, &now_ms);
             tvp = &tv;
+			// 计算最近时间事件执行距离当前时间的时间差
             tvp->tv_sec = shortest->when_sec - now_sec;
             if (shortest->when_ms < now_ms) {
+				//时间事件的发生时间小于当前时间，计算发生的秒和微秒
                 tvp->tv_usec = ((shortest->when_ms+1000) - now_ms)*1000;
                 tvp->tv_sec --;
             } else {
+            	//时间事件的发生时间大于等于当前时间，计算发生的秒和微秒
                 tvp->tv_usec = (shortest->when_ms - now_ms)*1000;
             }
             if (tvp->tv_sec < 0) tvp->tv_sec = 0;
@@ -327,6 +337,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
                 tv.tv_sec = tv.tv_usec = 0;
                 tvp = &tv;
             } else {
+            	// 没有时间事件且要等待file时间
                 /* Otherwise we can block */
                 tvp = NULL; /* wait forever */
             }
@@ -345,7 +356,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
              * processed, so we check if the event is still valid. */
             if (fe->mask & mask & AE_READABLE) {
                 rfired = 1;
-                // 处理读时间
+                // 处理读事件
                 fe->rfileProc(eventLoop,fd,fe->clientData,mask);
             }
             if (fe->mask & mask & AE_WRITABLE) {
@@ -355,8 +366,9 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
             }
             processed++;
         }
-    }
+    }//结束处理当前循环的socket事件
     /* Check time events */
+    // 处理时间事件
     if (flags & AE_TIME_EVENTS)
         processed += processTimeEvents(eventLoop);
 
@@ -390,6 +402,7 @@ void aeMain(aeEventLoop *eventLoop) {
     while (!eventLoop->stop) {
         if (eventLoop->beforesleep != NULL)
             eventLoop->beforesleep(eventLoop);
+
         aeProcessEvents(eventLoop, AE_ALL_EVENTS);
     }
 }

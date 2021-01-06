@@ -717,6 +717,7 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
             listDelNode(server.io_ready_clients,ln);
             c->flags &= (~REDIS_IO_WAIT);
             server.vm_blocked_clients--;
+            // note:event handler
             aeCreateFileEvent(server.el, c->fd, AE_READABLE,
                 readQueryFromClient, c);
             cmd = lookupCommand(c->argv[0]->ptr);
@@ -984,6 +985,7 @@ void initServer() {
 	//    1）客户端socket连接
 	//	  2）客户端断开
 	//	  3）客户端查询/写请求
+	// note:event handler
     if (server.ipfd > 0 && aeCreateFileEvent(server.el,server.ipfd,AE_READABLE,
         acceptTcpHandler,NULL) == AE_ERR) oom("creating file event");
     if (server.sofd > 0 && aeCreateFileEvent(server.el,server.sofd,AE_READABLE,

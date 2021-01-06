@@ -65,6 +65,7 @@ typedef struct aeFileEvent {
     int mask; /* one of AE_(READABLE|WRITABLE) */
     aeFileProc *rfileProc;
     aeFileProc *wfileProc;
+    // redis client对象
     void *clientData;
 } aeFileEvent;
 
@@ -76,6 +77,7 @@ typedef struct aeTimeEvent {
     aeTimeProc *timeProc;
     aeEventFinalizerProc *finalizerProc;
     void *clientData;
+	// 单链表后节点指针
     struct aeTimeEvent *next;
 } aeTimeEvent;
 
@@ -87,14 +89,16 @@ typedef struct aeFiredEvent {
 
 /* State of an event based program */
 typedef struct aeEventLoop {
+	// 当前 event loop 监听的fd列表里面的最大值，如果当前 event loop 监听的fd列表为空，则maxfd为-1
     int maxfd;
     long long timeEventNextId;
-	// 注册的监听fd列表，最大支持10240个fd
+	// 注册的监听fd列表，最大支持10240个fd， 这里的下标含义是fd
     aeFileEvent events[AE_SETSIZE]; /* Registered events */
 	// 就绪的fd列表
     aeFiredEvent fired[AE_SETSIZE]; /* Fired events */
     aeTimeEvent *timeEventHead;
     int stop;
+    // 这个是epoll这个fd对应的数据对象
     void *apidata; /* This is used for polling API specific data */
     aeBeforeSleepProc *beforesleep;
 } aeEventLoop;

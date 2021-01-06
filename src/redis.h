@@ -594,6 +594,7 @@ typedef struct _redisSortOperation {
 } redisSortOperation;
 
 /* ZSETs use a specialized version of Skiplists */
+// 跳表中的节点
 typedef struct zskiplistNode {
     robj *obj;
     double score;
@@ -606,6 +607,7 @@ typedef struct zskiplistNode {
     } level[];
 } zskiplistNode;
 
+// zset中的跳表实现
 typedef struct zskiplist {
     // 调表里面最底层的链表的头尾节点
     struct zskiplistNode *header, *tail;
