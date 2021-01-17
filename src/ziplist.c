@@ -87,13 +87,19 @@
 #define ZIP_IS_INT(enc) (!ZIP_IS_STR(enc) && ((enc) & 0x30) < 0x30)
 
 /* Utility macros */
+// 当前 ziplist 里面总的字节数
 #define ZIPLIST_BYTES(zl)       (*((uint32_t*)(zl)))
+// 尾节点的偏移量
 #define ZIPLIST_TAIL_OFFSET(zl) (*((uint32_t*)((zl)+sizeof(uint32_t))))
+// ziplist总节点数
 #define ZIPLIST_LENGTH(zl)      (*((uint16_t*)((zl)+sizeof(uint32_t)*2)))
-// 8+2
+// 8+2 = 10，头节点
 #define ZIPLIST_HEADER_SIZE     (sizeof(uint32_t)*2+sizeof(uint16_t))
+// ziplist里面首节点的地址
 #define ZIPLIST_ENTRY_HEAD(zl)  ((zl)+ZIPLIST_HEADER_SIZE)
+// 尾节点的地址
 #define ZIPLIST_ENTRY_TAIL(zl)  ((zl)+ZIPLIST_TAIL_OFFSET(zl))
+// 尾结点后面的地址
 #define ZIPLIST_ENTRY_END(zl)   ((zl)+ZIPLIST_BYTES(zl)-1)
 
 /* We know a positive increment can only be 1 because entries can only be
@@ -101,8 +107,11 @@
 #define ZIPLIST_INCR_LENGTH(zl,incr) { \
     if (ZIPLIST_LENGTH(zl) < UINT16_MAX) ZIPLIST_LENGTH(zl)+=incr; }
 
+// zplist 里面每个存储实体的结构
 typedef struct zlentry {
+    // prevrawlen占用的字节数; 前一个节点的长度
     unsigned int prevrawlensize, prevrawlen;
+    // lensize表示当前结点长度占用字节数；len表示当前结点长度
     unsigned int lensize, len;
     unsigned int headersize;
     unsigned char encoding;
@@ -114,8 +123,10 @@ static unsigned int zipEntryEncoding(unsigned char *p) {
     /* String encoding: 2 MSBs */
     unsigned char b = p[0] & 0xc0;
     if (b < 0xc0) {
+        // 字符数组
         return b;
     } else {
+        // 整数
         /* Integer encoding: 4 MSBs */
         return p[0] & 0xf0;
     }
@@ -142,6 +153,7 @@ static unsigned int zipDecodeLength(unsigned char *p, unsigned int *lensize) {
 
     if (ZIP_IS_STR(encoding)) {
         switch(encoding) {
+            // 一个字节
         case ZIP_STR_06B:
             len = p[0] & 0x3f;
             if (lensize) *lensize = 1;
@@ -318,9 +330,13 @@ static int64_t zipLoadInteger(unsigned char *p, unsigned char encoding) {
 /* Return a struct with all information about an entry. */
 static zlentry zipEntry(unsigned char *p) {
     zlentry e;
+    // 获取前一个节点的数据
     e.prevrawlen = zipPrevDecodeLength(p,&e.prevrawlensize);
+    // 获取encoding数据
     e.len = zipDecodeLength(p+e.prevrawlensize,&e.lensize);
+    // 当前ziplist 的节点的头信息占用字节数
     e.headersize = e.prevrawlensize+e.lensize;
+    // 保留encoding结果
     e.encoding = zipEntryEncoding(p+e.prevrawlensize);
     e.p = p;
     return e;
@@ -328,6 +344,7 @@ static zlentry zipEntry(unsigned char *p) {
 
 /* Return the total number of bytes used by the entry at "p". */
 static unsigned int zipRawEntryLength(unsigned char *p) {
+    // 类型转换，将指针p转换成元素实体模型：zlentry
     zlentry e = zipEntry(p);
     return e.headersize + e.len;
 }
@@ -486,6 +503,11 @@ static unsigned char *__ziplistDelete(unsigned char *zl, unsigned char *p, unsig
 }
 
 /* Insert item at "p". */
+// push一个节点
+// zl: ziplist的指针；
+// p: 待插入的地址
+// s: 字符串
+// slen: 字符串长度
 static unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned char *s, unsigned int slen) {
     size_t curlen = ZIPLIST_BYTES(zl), reqlen, prevlen = 0;
     size_t offset;
@@ -497,10 +519,10 @@ static unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsig
     zlentry entry, tail;
 
     /* Find out prevlen for the entry that is inserted. */
-    if (p[0] != ZIP_END) {
+    if (p[0] != ZIP_END) {//头结点插入
         entry = zipEntry(p);
         prevlen = entry.prevrawlen;
-    } else {
+    } else {//尾结点插入
         unsigned char *ptail = ZIPLIST_ENTRY_TAIL(zl);
         if (ptail[0] != ZIP_END) {
             prevlen = zipRawEntryLength(ptail);
@@ -573,6 +595,11 @@ static unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsig
     return zl;
 }
 
+// push一个节点
+// zl: ziplist的指针；
+// s: 字符串
+// slen: 字符串长度
+// where: 插入在头或者尾
 unsigned char *ziplistPush(unsigned char *zl, unsigned char *s, unsigned int slen, int where) {
     unsigned char *p;
     p = (where == ZIPLIST_HEAD) ? ZIPLIST_ENTRY_HEAD(zl) : ZIPLIST_ENTRY_END(zl);

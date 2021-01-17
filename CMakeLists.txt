@@ -88,3 +88,6 @@ set(RRDIS_SRC
         )
 
 add_executable(redis ${RRDIS_SRC} src/redis.c)
+
+add_executable(sdstest src/sds.c src/sds.h src/zmalloc.h src/zmalloc.c  src/endian.c src/endian.h src/util.c src/util.h src/ziplist.h src/ziplist.c
+        atest/sds_test.c)

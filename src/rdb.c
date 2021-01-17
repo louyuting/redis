@@ -391,6 +391,7 @@ int getObjectSaveType(robj *o) {
 }
 
 /* Save the DB on disk. Return REDIS_ERR on error, REDIS_OK on success */
+// 实际执行全量内存DB保存
 int rdbSave(char *filename) {
     dictIterator *di = NULL;
     dictEntry *de;
@@ -496,6 +497,7 @@ werr:
     return REDIS_ERR;
 }
 
+// fork子进程执行rdb save
 int rdbSaveBackground(char *filename) {
     pid_t childpid;
     long long start;

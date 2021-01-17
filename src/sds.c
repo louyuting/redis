@@ -48,6 +48,7 @@ static void sdsOomAbort(void) {
     abort();
 }
 
+// 创建一个 simple dynamic string, 这里传入了初始值以及初始值的长度
 sds sdsnewlen(const void *init, size_t initlen) {
     struct sdshdr *sh;
 
